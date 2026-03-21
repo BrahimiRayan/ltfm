@@ -68,10 +68,10 @@ chmod +x uninstall.sh
 |--------------|-------------------------|
 | ↑ / ↓        | Navigate                |
 | Enter        | Open file or folder     |
-| R |r         | Rename                  |
-| D |d         | Delete                  |
-| S |s         | Search / jump to path   |
-| C |c         | Create file or folder   |
+| R /r         | Rename                  |
+| D /d         | Delete                  |
+| S /s         | Search / jump to path   |
+| C /c         | Create file or folder   |
 | q/:q         | Quit                    |
 
 ---
