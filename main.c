@@ -1,4 +1,5 @@
 #define _XOPEN_SOURCE 500
+#define VERSION "1.0.0"
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -6,6 +7,43 @@
 #include <unistd.h>
 #include <termios.h>
 #include <ftw.h>
+#include <sys/stat.h>
+
+#define NAME_F 255
+#define MAX_ELEMENTS 150
+struct Folder_t
+{
+    char name[NAME_F];
+    unsigned char type;
+};
+
+void draw_start(){
+    system("clear");
+    printf("                                    ██╗  ████████╗███████╗███╗   ███╗\n");
+    printf("                                    ██║  ╚══██╔══╝██╔════╝████╗ ████║\n");
+    printf("                                    ██║     ██║   █████╗  ██╔████╔██║\n");
+    printf("                                    ██║     ██║   ██╔══╝  ██║╚██╔╝██║\n");
+    printf("                                    ███████╗██║   ██║     ██║ ╚═╝ ██║\n");
+    printf("                                    ╚══════╝╚═╝   ╚═╝     ╚═╝     ╚═╝\n");
+    printf("\n                                       Linux Terminal File Manager\n");
+    printf("                           ────────────────────────────────────────────────────\n\n");
+    printf("                                         version %s\n\n", VERSION);
+    printf("Press [ENTER] to start ..");
+    getchar();
+}
+
+void draw_goodbye(){
+    system("clear");
+    printf("                                    ██╗  ████████╗███████╗███╗   ███╗\n");
+    printf("                                    ██║  ╚══██╔══╝██╔════╝████╗ ████║\n");
+    printf("                                    ██║     ██║   █████╗  ██╔████╔██║\n");
+    printf("                                    ██║     ██║   ██╔══╝  ██║╚██╔╝██║\n");
+    printf("                                    ███████╗██║   ██║     ██║ ╚═╝ ██║\n");
+    printf("                                    ╚══════╝╚═╝   ╚═╝     ╚═╝     ╚═╝\n");
+    printf("\n                                       Linux Terminal File Manager\n");
+    printf("                           ────────────────────────────────────────────────────\n\n");
+    printf("                                        Until we meet again!\n\n");
+}
 
 static int remove_entry(const char *path, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
@@ -16,15 +54,6 @@ int delete_recursive(const char *path)
 {
     return nftw(path, remove_entry, 64, FTW_DEPTH | FTW_PHYS);
 }
-#define NAME_F 255
-#define MAX_ELEMENTS 100
-
-struct Folder_t
-{
-    char name[NAME_F];
-    unsigned char type;
-};
-void go_folder(const char *name, struct termios *original);
 
 void enable_raw_mode(struct termios *original)
 {
@@ -70,7 +99,6 @@ void print_menu(struct Folder_t entries[], int count, int selected)
 
     for (int i = 0; i < count; i++)
     {
-
         char *indicator = (entries[i].type == 4) ? " 📁" : " 📃";
         if (i == selected)
             printf("%s \033[7m > %s \033[0m\n", indicator, entries[i].name);
@@ -78,13 +106,15 @@ void print_menu(struct Folder_t entries[], int count, int selected)
             printf("%s   %s\n", indicator, entries[i].name);
     }
     printf("\n[UP/DOWN] navigate | [ENTER] open   | [q/Q] quit");
-    printf("\n[r/R]     Rename   | [s/S]   Search | [D/d] delete \n");
+    printf("\n[R/r]     Rename   | [S/s]   Search | [D/d] delete");
+    printf("\n[C/c]     Create mode \n");
 }
+
+void go_folder(const char *start, struct termios *original);
 
 void search_mode(char search_w[], DIR *folder, struct termios *original)
 {
     printf("---> %s\n", search_w);
-    struct dirent *direlm;
     folder = opendir(search_w);
     if (folder == NULL)
     {
@@ -94,6 +124,7 @@ void search_mode(char search_w[], DIR *folder, struct termios *original)
     }
     else
     {
+        closedir(folder);
         enable_raw_mode(original);
         go_folder(search_w, original);
     }
@@ -146,7 +177,6 @@ void delete_f(char *d_path, char current_p[], struct termios *original)
         printf("\n──────────────────────────────────────────────────────────────────\n");
         printf("\n %s Deleted successfully.", d_path);
         printf("\n──────────────────────────────────────────────────────────────────\n");
-        printf("Press any key to continue...");
         enable_raw_mode(original);
         return go_folder(current_p, original);
     }
@@ -158,24 +188,86 @@ void delete_f(char *d_path, char current_p[], struct termios *original)
         printf("\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
     }
 }
-void go_folder(const char *name, struct termios *original)
+
+void create_file(char current_p[], struct termios *original){
+    char name[NAME_F];
+    system("clear");
+    printf("\n\n──────────────────────────────────────────────────────────────────\n");
+    printf("\n                       File Creation mode\n");
+    printf("\n──────────────────────────────────────────────────────────────────\n");
+    printf("<!> please enter the name of the file + extention\n and the file name shouldn't has spcial characters.");
+    printf("\n\nExemple : FileName.txt , main.c , index.html ...\n");
+    printf("$ ");
+
+    scanf("%s" , name);
+
+    if(name[0] == ' '){
+        printf("\nImposible to create such a file , try again ! \n");
+        return;
+    }
+
+    FILE *file = fopen(name , "w");
+
+    if(file == NULL){
+        printf("\nA probleme has ocured while trying to creat the file : %s \n" , name);
+        return;
+    }
+
+    printf("file created succssesfuly\n");
+    fclose(file);
+    enable_raw_mode(original);
+    return go_folder(current_p, original);
+}
+
+void create_folder(char current_p[], struct termios *original){
+    char name[NAME_F];
+    system("clear");
+    printf("\n\n──────────────────────────────────────────────────────────────────\n");
+    printf("\n                       Folder Creation mode\n");
+    printf("\n──────────────────────────────────────────────────────────────────\n");
+    printf("<!> please enter the name of the Folder the file name shouldn't has spcial characters.\n");
+    printf("$ ");
+
+    scanf("%s" , name);
+
+    if(name[0] == ' '){
+        printf("\nImposible to create such a file , try again ! \n");
+        return;
+    }
+
+    if(mkdir(name , 0777) == -1){
+        printf("\nA probleme has ocured while trying to create the folder : %s \n" , name);
+        return;
+    }
+
+    printf("folder created succssesfuly\n");
+    enable_raw_mode(original);
+    return go_folder(current_p, original);
+}
+
+void go_folder(const char *start, struct termios *original)
 {
+    char current[4096];
+    strncpy(current, start, sizeof(current) - 1);
+    current[sizeof(current) - 1] = '\0';
+
+top:;
     DIR *folder;
     struct dirent *entry;
 
-    if (!name || name[0] == '\0')
+    if (!current[0])
     {
         printf("You must provide a folder name!\n");
         return;
     }
 
-    folder = opendir(name);
+    folder = opendir(current);
     if (folder == NULL)
         return;
 
-    if (chdir(name) != 0)
+    if (chdir(current) != 0)
     {
-        printf("Could not switch to directory: %s\n", name);
+        printf("Could not switch to directory: %s\n", current);
         closedir(folder);
         return;
     }
@@ -199,20 +291,23 @@ void go_folder(const char *name, struct termios *original)
     {
         char buf[3];
         read(STDIN_FILENO, buf, 1);
+
         // quiting
         if (buf[0] == 'q' || buf[0] == 'Q')
         {
             disable_raw_mode(original);
-            printf("\nUNTIL WE MEET AGAIN!\n");
+            draw_goodbye();
             exit(0);
         }
+
         // selecting
         if (buf[0] == '\n' || buf[0] == '\r')
         {
             if (arr[selected].type == 4)
             {
-                go_folder(arr[selected].name, original);
-                selected = 0;
+                strncpy(current, arr[selected].name, sizeof(current) - 1);
+                current[sizeof(current) - 1] = '\0';
+                goto top;
             }
             else
             {
@@ -221,6 +316,7 @@ void go_folder(const char *name, struct termios *original)
                 system(cmd);
             }
         }
+
         // moving
         if (buf[0] == '\033')
         {
@@ -241,7 +337,7 @@ void go_folder(const char *name, struct termios *original)
                 }
             }
         }
-        print_menu(arr, count, selected);
+
         // search mode
         if (buf[0] == 's' || buf[0] == 'S')
         {
@@ -249,10 +345,13 @@ void go_folder(const char *name, struct termios *original)
             char cmds[1000];
             while (1)
             {
-                printf("(PATH) : ");
+                printf("\n\n──────────────────────────────────────────────────────────────────\n");
+                printf("\n                    [:q] to quit Rename mode\n");
+                printf("\n──────────────────────────────────────────────────────────────────\n");
+                printf("(Search) : ");
                 scanf("%s", cmds);
 
-                if (strcmp(cmds, "q") == 0)
+                if (strcmp(cmds, ":q") == 0)
                 {
                     enable_raw_mode(original);
                     system("clear");
@@ -261,13 +360,12 @@ void go_folder(const char *name, struct termios *original)
                 }
                 else
                 {
-                    printf("\n you searched : %s \n", cmds);
                     search_mode(cmds, folder, original);
                 }
             }
         }
 
-        // rename file
+        // rename mode
         if (buf[0] == 'r' || buf[0] == 'R')
         {
             disable_raw_mode(original);
@@ -304,6 +402,7 @@ void go_folder(const char *name, struct termios *original)
                 rename_f(oldname, newName, arr[selected].name, original);
             }
         }
+
         // Deletion mode
         if (buf[0] == 'd' || buf[0] == 'D')
         {
@@ -312,17 +411,18 @@ void go_folder(const char *name, struct termios *original)
             while (1)
             {
                 printf("\n\n──────────────────────────────────────────────────────────────────\n");
-                printf("\n                    [q] to quit Deleting mode\n");
+                printf("\n                    [:q] to quit Deleting mode\n");
                 printf("\n──────────────────────────────────────────────────────────────────\n");
                 printf("\n >> Please enter the CORRECT PATH to the file/Directory you want to delete \n");
                 printf("$ ");
                 scanf("%255s", d_path);
-                if (strcmp(d_path, "q") == 0)
+                if (strcmp(d_path, ":q") == 0)
                 {
                     enable_raw_mode(original);
                     system("clear");
                     print_menu(arr, count, selected);
-                    break;
+                    strncpy(current, arr[selected].name, sizeof(current) - 1);
+                    goto top;
                 }
                 else
                 {
@@ -330,11 +430,45 @@ void go_folder(const char *name, struct termios *original)
                 }
             }
         }
+
+        // create mode
+        if(buf[0] == 'c' || buf[0] == 'C'){
+            disable_raw_mode(original);
+            char chose[3];
+
+            while (1)
+            {
+                printf("\n\n──────────────────────────────────────────────────────────────────\n");
+                printf("\n                    [:q] to quit CREATION mode\n");
+                printf("\n──────────────────────────────────────────────────────────────────\n");
+                printf("\n >> Please select what do you want to create :\n (F/f) FILE. \n (D/d) DIRECTORY.\n");
+                printf("$ ");
+                scanf("%s" , chose);
+
+                if(strcmp(chose , "f") == 0 || strcmp(chose , "F") == 0) {
+                   create_file(arr[selected].name , original);
+                }else
+                    if (strcmp(chose , "D") == 0 || strcmp(chose , "d") == 0){
+                        create_folder(arr[selected].name, original);
+                    }
+                else if (strcmp(chose , ":q") == 0){
+                    enable_raw_mode(original);
+                    system("clear");
+                    print_menu(arr, count, selected);
+                    strncpy(current, arr[selected].name, sizeof(current) - 1);
+                    goto top;
+                }
+            }
+        }
+
+        print_menu(arr, count, selected);
     }
 }
 
 int main()
 {
+
+    draw_start();
     struct termios original;
     enable_raw_mode(&original);
     go_folder(".", &original);
