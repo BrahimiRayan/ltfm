@@ -34,7 +34,7 @@ A minimal, fast TUI file manager for Linux written in pure C with no dependencie
 ### Quick install (recommended)
 
 ```bash
-git clone https://github.com/BrahimiRayan/lftm.git
+git clone https://github.com/BrahimiRayan/ltfm.git
 cd ltfm
 chmod +x install.sh
 ./install.sh
@@ -45,7 +45,7 @@ Then type `ltfm` anywhere in your terminal to run it.
 ### Manual build
 
 ```bash
-git clone https://github.com/BrahimiRayan/lftm.git
+git clone https://github.com/BrahimiRayan/ltfm.git
 cd ltfm
 make
 ./ltfm
