@@ -9,8 +9,10 @@
 #include <ftw.h>
 #include <sys/stat.h>
 
+#define CLEAR_SCREEN() do { system("clear"); printf("\033[H\033[2J\033[3J"); fflush(stdout); } while(0)
 #define NAME_F 255
 #define MAX_ELEMENTS 150
+
 struct Folder_t
 {
     char name[NAME_F];
@@ -18,7 +20,7 @@ struct Folder_t
 };
 
 void draw_start(){
-    system("clear");
+    CLEAR_SCREEN();
     printf("                                    ██╗  ████████╗███████╗███╗   ███╗\n");
     printf("                                    ██║  ╚══██╔══╝██╔════╝████╗ ████║\n");
     printf("                                    ██║     ██║   █████╗  ██╔████╔██║\n");
@@ -26,14 +28,15 @@ void draw_start(){
     printf("                                    ███████╗██║   ██║     ██║ ╚═╝ ██║\n");
     printf("                                    ╚══════╝╚═╝   ╚═╝     ╚═╝     ╚═╝\n");
     printf("\n                                       Linux Terminal File Manager\n");
-    printf("                           ────────────────────────────────────────────────────\n\n");
+    printf("                           ────────────────────────────────────────────────────\n");
     printf("                                         version %s\n\n", VERSION);
     printf("Press [ENTER] to start ..");
     getchar();
+    CLEAR_SCREEN();
 }
 
 void draw_goodbye(){
-    system("clear");
+    CLEAR_SCREEN();
     printf("                                    ██╗  ████████╗███████╗███╗   ███╗\n");
     printf("                                    ██║  ╚══██╔══╝██╔════╝████╗ ████║\n");
     printf("                                    ██║     ██║   █████╗  ██╔████╔██║\n");
@@ -41,12 +44,33 @@ void draw_goodbye(){
     printf("                                    ███████╗██║   ██║     ██║ ╚═╝ ██║\n");
     printf("                                    ╚══════╝╚═╝   ╚═╝     ╚═╝     ╚═╝\n");
     printf("\n                                       Linux Terminal File Manager\n");
-    printf("                           ────────────────────────────────────────────────────\n\n");
-    printf("                                        Until we meet again!\n\n");
+    printf("                           ────────────────────────────────────────────────────\n");
+    printf("                                            Until we meet again!\n\n");
+}
+
+void Answer (char message[] , int t){
+    if(t == 0 ){
+        CLEAR_SCREEN();
+        printf("\n──────────────────────────────────────────────────────────────────\n#");
+        printf("#\n                  %s \n#", message);
+        printf("#\n──────────────────────────────────────────────────────────────────\n");
+        sleep(1.6);
+    }else if(t == -1) {
+        CLEAR_SCREEN();
+        printf("\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n#");
+        printf("#\n             %s \n#", message);
+        printf("#\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
+        sleep(2);
+    }else if (t == 1){
+        printf("\n──────────────────────────────────────────────────────────────────\n#");
+        printf("#\n                  %s \n#", message);
+        printf("#\n──────────────────────────────────────────────────────────────────\n");
+    }
 }
 
 static int remove_entry(const char *path, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
+    (void)sb; (void)typeflag; (void)ftwbuf;
     return remove(path);
 }
 
@@ -91,75 +115,73 @@ void Ordering_elements(struct Folder_t tab[], int count)
 
 void print_menu(struct Folder_t entries[], int count, int selected)
 {
-    char cwd[NAME_F];
-    system("clear");
+    char cwd[4096];
+    int num_f = 0 ;
+    CLEAR_SCREEN();
     printf("──────────────────────────────────────────────────────────────────\n");
     printf("📁  %s\n", getcwd(cwd, sizeof(cwd)) ? cwd : "?");
     printf("──────────────────────────────────────────────────────────────────\n");
-
+    
     for (int i = 0; i < count; i++)
     {
-        char *indicator = (entries[i].type == 4) ? " 📁" : " 📃";
+        char *indicator = (entries[i].type == 4) ? " 📁" :" 📃";
+        if(entries[i].type == 4) num_f++ ;
         if (i == selected)
             printf("%s \033[7m > %s \033[0m\n", indicator, entries[i].name);
         else
-            printf("%s   %s\n", indicator, entries[i].name);
+            printf("-%s %s \n", indicator, entries[i].name);
     }
+    printf("\n(Folders) : %d / %d \n" , num_f , count);
+    printf("\n(Files) : %d / %d \n" ,count - num_f , count);
+
     printf("\n[UP/DOWN] navigate | [ENTER] open   | [q/Q] quit");
     printf("\n[R/r]     Rename   | [S/s]   Search | [D/d] delete");
     printf("\n[C/c]     Create mode \n");
 }
 
-void go_folder(const char *start, struct termios *original);
-
-void search_mode(char search_w[], DIR *folder, struct termios *original)
+void search_mode(char search_w[], struct termios *original)
 {
-    printf("---> %s\n", search_w);
-    folder = opendir(search_w);
-    if (folder == NULL)
+    DIR *test = opendir(search_w);
+    if (test == NULL)
     {
-        printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
-        printf("Invalide path ! try again \n");
-        printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
+        Answer("Invalid path! Try again.", -1);
+        enable_raw_mode(original);
     }
     else
     {
-        closedir(folder);
+        closedir(test);
+        chdir(search_w);
         enable_raw_mode(original);
-        go_folder(search_w, original);
     }
 }
 
-void rename_f(char path1[], char path2[], char current_p[], struct termios *original)
+void rename_f(char path1[], char path2[], struct termios *original)
 {
-    if (path1[0] == ' ' || path2[0] == ' ')
+    if (path1[0] == '\0' || path2[0] == '\0')
     {
-        printf("\nNo naming provided\n");
+        Answer("No name provided." , -1);
+        enable_raw_mode(original);
         return;
     }
 
     if (rename(path1, path2) == 0)
     {
-        printf("\n──────────────────────────────────────────────────────────────────\n");
-        printf("\nChanging %s ---> %s succesfuly .\n", path1, path2);
-        printf("\n──────────────────────────────────────────────────────────────────\n");
+        Answer("The input renamed successfully.", 0);
         enable_raw_mode(original);
-        return go_folder(current_p, original);
     }
     else
     {
-        system("clear");
-        printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
-        printf("\nChanging %s ---> %s Faild .\n", path1, path2);
-        printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
+        Answer("The input Cannot be renamed make ! No special characters are allowed!", -1);
+        enable_raw_mode(original);
     }
 }
 
-void delete_f(char *d_path, char current_p[], struct termios *original)
+void delete_f(char *d_path, struct termios *original)
 {
-    if (strcmp(d_path, " ") == 0)
+    if (d_path[0] == '\0')
     {
-        printf("\nNo file is provided\n");
+        Answer("No file provided.", -1);
+        enable_raw_mode(original);
         return;
     }
 
@@ -173,104 +195,70 @@ void delete_f(char *d_path, char current_p[], struct termios *original)
 
     if (result == 0)
     {
-        system("clear");
-        printf("\n──────────────────────────────────────────────────────────────────\n");
-        printf("\n %s Deleted successfully.", d_path);
-        printf("\n──────────────────────────────────────────────────────────────────\n");
+        Answer("INPUT deleted successfuly !", 0);
         enable_raw_mode(original);
-        return go_folder(current_p, original);
     }
     else
     {
-        system("clear");
-        printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
-        printf("\n               FAILED to delete : %s", d_path);
-        printf("\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
+        Answer("INPUT failed to be deleted ! try again or check the PATH ", -1);
+        enable_raw_mode(original);
     }
 }
 
-void create_file(char current_p[], struct termios *original){
+void create_file(struct termios *original)
+{
     char name[NAME_F];
-    system("clear");
-    printf("\n\n──────────────────────────────────────────────────────────────────\n");
-    printf("\n                       File Creation mode\n");
-    printf("\n──────────────────────────────────────────────────────────────────\n");
-    printf("<!> please enter the name of the file + extention\n and the file name shouldn't has spcial characters.");
-    printf("\n\nExemple : FileName.txt , main.c , index.html ...\n");
+    Answer("File Creation mode" , 1);
+    printf("<!> Please enter the name of the file + extension.\n");
+    printf("\nExample: FileName.txt , main.c , index.html ...\n");
     printf("$ ");
 
-    scanf("%s" , name);
+    scanf("%254s", name);
 
-    if(name[0] == ' '){
-        printf("\nImposible to create such a file , try again ! \n");
+    FILE *file = fopen(name, "w");
+    if (file == NULL)
+    {
+        Answer("File failed to be created ! try again ." , -1);
         return;
     }
 
-    FILE *file = fopen(name , "w");
-
-    if(file == NULL){
-        printf("\nA probleme has ocured while trying to creat the file : %s \n" , name);
-        return;
-    }
-
-    printf("file created succssesfuly\n");
+    Answer("File is created successfully." , 0);
     fclose(file);
     enable_raw_mode(original);
-    return go_folder(current_p, original);
 }
 
-void create_folder(char current_p[], struct termios *original){
+void create_folder(struct termios *original)
+{
     char name[NAME_F];
-    system("clear");
-    printf("\n\n──────────────────────────────────────────────────────────────────\n");
-    printf("\n                       Folder Creation mode\n");
-    printf("\n──────────────────────────────────────────────────────────────────\n");
-    printf("<!> please enter the name of the Folder the file name shouldn't has spcial characters.\n");
+    Answer("File Creation mode" , 1);
+    printf("<!> Please enter the name of the folder.\n");
     printf("$ ");
 
-    scanf("%s" , name);
+    scanf("%254s", name);
 
-    if(name[0] == ' '){
-        printf("\nImposible to create such a file , try again ! \n");
+    if (mkdir(name, 0777) == -1)
+    {
+         Answer("Folder failed to be created ! try again ." , -1);
         return;
     }
 
-    if(mkdir(name , 0777) == -1){
-        printf("\nA probleme has ocured while trying to create the folder : %s \n" , name);
-        return;
-    }
-
-    printf("folder created succssesfuly\n");
+    Answer("Folder is created successfully." , 0);
     enable_raw_mode(original);
-    return go_folder(current_p, original);
 }
 
 void go_folder(const char *start, struct termios *original)
 {
-    char current[4096];
-    strncpy(current, start, sizeof(current) - 1);
-    current[sizeof(current) - 1] = '\0';
+    chdir(start);
 
 top:;
     DIR *folder;
     struct dirent *entry;
+    char current[4096];
+    getcwd(current, sizeof(current));
 
-    if (!current[0])
-    {
-        printf("You must provide a folder name!\n");
-        return;
-    }
-
-    folder = opendir(current);
+    folder = opendir(".");
     if (folder == NULL)
         return;
-
-    if (chdir(current) != 0)
-    {
-        printf("Could not switch to directory: %s\n", current);
-        closedir(folder);
-        return;
-    }
 
     struct Folder_t arr[MAX_ELEMENTS];
     int count = 0;
@@ -289,10 +277,9 @@ top:;
 
     while (1)
     {
-        char buf[3];
+        char buf[3] = {0};
         read(STDIN_FILENO, buf, 1);
 
-        // quiting
         if (buf[0] == 'q' || buf[0] == 'Q')
         {
             disable_raw_mode(original);
@@ -300,24 +287,22 @@ top:;
             exit(0);
         }
 
-        // selecting
         if (buf[0] == '\n' || buf[0] == '\r')
         {
             if (arr[selected].type == 4)
             {
-                strncpy(current, arr[selected].name, sizeof(current) - 1);
-                current[sizeof(current) - 1] = '\0';
-                goto top;
+                if (chdir(arr[selected].name) == 0)
+                    goto top;
             }
             else
             {
                 char cmd[NAME_F + 20];
-                snprintf(cmd, sizeof(cmd), "xdg-open '%s'", arr[selected].name);
+                snprintf(cmd, sizeof(cmd), "xdg-open '%s' &", arr[selected].name);
                 system(cmd);
             }
         }
 
-        // moving
+        //navigation 
         if (buf[0] == '\033')
         {
             read(STDIN_FILENO, &buf[1], 1);
@@ -327,45 +312,40 @@ top:;
                 switch (buf[2])
                 {
                 case 'A':
-                    if (selected > 0)
-                        selected--;
+                    if (selected > 0) selected--;
                     break;
                 case 'B':
-                    if (selected < count - 1)
-                        selected++;
+                    if (selected < count - 1) selected++;
                     break;
                 }
             }
         }
 
-        // search mode
+        /* search mode */
         if (buf[0] == 's' || buf[0] == 'S')
         {
             disable_raw_mode(original);
             char cmds[1000];
             while (1)
             {
-                printf("\n\n──────────────────────────────────────────────────────────────────\n");
-                printf("\n                    [:q] to quit Rename mode\n");
-                printf("\n──────────────────────────────────────────────────────────────────\n");
-                printf("(Search) : ");
-                scanf("%s", cmds);
+                Answer("[:q] to quit Search mode" , 1);
+                printf("(Search): ");
+                scanf("%999s", cmds);
 
-                if (strcmp(cmds, ":q") == 0)
+                if (strcmp(cmds, ":q") == 0 || strcmp(cmds, ":Q") == 0)
                 {
                     enable_raw_mode(original);
-                    system("clear");
-                    print_menu(arr, count, selected);
                     break;
                 }
                 else
                 {
-                    search_mode(cmds, folder, original);
+                    search_mode(cmds, original);
+                    goto top;
                 }
             }
         }
 
-        // rename mode
+        /* rename mode */
         if (buf[0] == 'r' || buf[0] == 'R')
         {
             disable_raw_mode(original);
@@ -373,90 +353,71 @@ top:;
             char newName[NAME_F];
             while (1)
             {
-                printf("\n\n──────────────────────────────────────────────────────────────────\n");
-                printf("\n                    [:q] to quit Rename mode\n");
-                printf("\n──────────────────────────────────────────────────────────────────\n");
-                printf(" > Please enter the CORRECT PATH to the Directory/file you want to rename \n");
-                printf("$ ");
-                scanf("%255s", oldname);
-                if (strcmp(oldname, ":q") == 0)
+                Answer("[:q] to quit Rename mode" , 1);
+                printf(" > Enter the path of the file/directory to rename:\n$ ");
+                scanf("%254s", oldname);
+                if (strcmp(oldname, ":q") == 0 || strcmp(oldname, ":Q") == 0)
                 {
                     enable_raw_mode(original);
-                    system("clear");
-                    print_menu(arr, count, selected);
                     break;
                 }
-                printf("\n");
-                printf(" > Enter the new name (if it a file you need to provide the extension) , the new name should also be in a CORRECT PATH\n");
-                printf("   Exemple : /home/usr/Folder ---> /home/usr/newNameFolder\n");
-                printf("$ ");
-                scanf("%255s", newName);
-                printf("\n");
-                if (strcmp(newName, ":q") == 0)
+                printf("\n > Enter the new name/path:\n$ ");
+                scanf("%254s", newName);
+                if (strcmp(newName, ":q") == 0 || strcmp(newName, ":Q") == 0)
                 {
                     enable_raw_mode(original);
-                    system("clear");
-                    print_menu(arr, count, selected);
                     break;
                 }
-                rename_f(oldname, newName, arr[selected].name, original);
+                rename_f(oldname, newName, original);
+                goto top;
             }
         }
 
-        // Deletion mode
+        /* deletion mode */
         if (buf[0] == 'd' || buf[0] == 'D')
         {
             disable_raw_mode(original);
             char d_path[NAME_F];
             while (1)
             {
-                printf("\n\n──────────────────────────────────────────────────────────────────\n");
-                printf("\n                    [:q] to quit Deleting mode\n");
-                printf("\n──────────────────────────────────────────────────────────────────\n");
-                printf("\n >> Please enter the CORRECT PATH to the file/Directory you want to delete \n");
-                printf("$ ");
-                scanf("%255s", d_path);
-                if (strcmp(d_path, ":q") == 0)
+                Answer("[:q] to quit Delete mode" , 1);
+                printf("\n >> Enter the path of the file/directory to delete:\n$ ");
+                scanf("%254s", d_path);
+                if (strcmp(d_path, ":q") == 0 || strcmp(d_path, ":Q") == 0)
                 {
                     enable_raw_mode(original);
-                    system("clear");
-                    print_menu(arr, count, selected);
-                    strncpy(current, arr[selected].name, sizeof(current) - 1);
-                    goto top;
+                    break;
                 }
-                else
-                {
-                    delete_f(d_path, arr[selected].name, original);
-                }
+                delete_f(d_path, original);
+                goto top;
             }
         }
 
-        // create mode
-        if(buf[0] == 'c' || buf[0] == 'C'){
+        /* create mode */
+        if (buf[0] == 'c' || buf[0] == 'C')
+        {
             disable_raw_mode(original);
             char chose[3];
-
             while (1)
             {
-                printf("\n\n──────────────────────────────────────────────────────────────────\n");
-                printf("\n                    [:q] to quit CREATION mode\n");
-                printf("\n──────────────────────────────────────────────────────────────────\n");
-                printf("\n >> Please select what do you want to create :\n (F/f) FILE. \n (D/d) DIRECTORY.\n");
-                printf("$ ");
-                scanf("%s" , chose);
+                Answer("[:q] to quit Create mode" , 1);
+                printf("\n >> What do you want to create?\n (F/f) File\n (D/d) Directory\n$ ");
+                scanf("%2s", chose);
 
-                if(strcmp(chose , "f") == 0 || strcmp(chose , "F") == 0) {
-                   create_file(arr[selected].name , original);
-                }else
-                    if (strcmp(chose , "D") == 0 || strcmp(chose , "d") == 0){
-                        create_folder(arr[selected].name, original);
-                    }
-                else if (strcmp(chose , ":q") == 0){
-                    enable_raw_mode(original);
-                    system("clear");
-                    print_menu(arr, count, selected);
-                    strncpy(current, arr[selected].name, sizeof(current) - 1);
+                if (strcmp(chose, "f") == 0 || strcmp(chose, "F") == 0)
+                {
+                    create_file(original);
                     goto top;
+                }
+                else if (strcmp(chose, "D") == 0 || strcmp(chose, "d") == 0)
+                {
+                    create_folder(original);
+                    goto top;
+                }
+                else if (strcmp(chose, ":q") == 0 || strcmp(chose, ":Q") == 0)
+                {
+                    enable_raw_mode(original);
+                    break;
                 }
             }
         }
@@ -467,7 +428,6 @@ top:;
 
 int main()
 {
-
     draw_start();
     struct termios original;
     enable_raw_mode(&original);
